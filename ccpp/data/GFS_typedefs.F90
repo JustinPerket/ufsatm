@@ -2,21 +2,10 @@ module GFS_typedefs
 
    use mpi_f08
    use machine,                  only: kind_phys, kind_dbl_prec, kind_sngl_prec
-   use physcons,                 only: con_cp, con_fvirt, con_g, rholakeice,           &
-                                       con_hvap, con_hfus, con_pi, con_rd, con_rv,     &
-                                       con_t0c, con_cvap, con_cliq, con_eps, con_epsq, &
-                                       con_epsm1, con_ttp, rlapse, con_jcal, con_rhw0, &
-                                       con_sbc, con_tice, cimin, con_p0, rhowater,     &
-                                       con_csol, con_epsqs, con_rocp, con_rog,         &
-                                       con_omega, con_rerth, con_psat, karman, rainmin,&
-                                       con_c, con_plnk, con_boltz, con_solr_2008,      &
-                                       con_solr_2002, con_thgni, con_1ovg, con_rgas,   &
-                                       con_avgd, con_amd, con_amw, con_one, con_p001,  &
-                                       con_secinday
-
+   use physcons,                 only: rhowater
    use module_radsw_parameters,  only: topfsw_type, sfcfsw_type, NBDSW
    use module_radlw_parameters,  only: topflw_type, sfcflw_type, NBDLW
-   use module_mp_tempo_params,   only: ty_tempo_cfg
+   use module_mp_tempo_cfgs,     only: ty_tempo_cfgs
    use module_ozphys,            only: ty_ozphys
    use module_h2ophys,           only: ty_h2ophys
    use land_iau_mod,             only: land_iau_external_data_type, land_iau_control_type, &
@@ -42,6 +31,7 @@ module GFS_typedefs
    real(kind=kind_phys), parameter :: limit_unspecified = 1e12 !< special constant for "namelist value was not provided" in radar-derived temperature tendency limit range
 
    integer, parameter :: physics_no_tracer = -99
+
 
 !> \section arg_table_GFS_typedefs
 !! \htmlinclude GFS_typedefs.html
@@ -203,6 +193,14 @@ module GFS_typedefs
     real (kind=kind_phys), pointer :: gv0 (:,:)   => null()  !< updated meridional wind
     real (kind=kind_phys), pointer :: gt0 (:,:)   => null()  !< updated temperature
     real (kind=kind_phys), pointer :: gq0 (:,:,:) => null()  !< updated tracers
+
+    !-- Out (process tendencies)
+    !-- PBL
+    real (kind=kind_phys), pointer :: ten_u_pbl(:,:)   => null()  !< Zonal-wind tendency ...
+    real (kind=kind_phys), pointer :: ten_v_pbl(:,:)   => null()  !< Meridional-wind tendency ...
+    !-- Convection
+    real (kind=kind_phys), pointer :: ten_u_conv(:,:)  => null()  !< Zonal-wind tendency due to convection scheme
+    real (kind=kind_phys), pointer :: ten_v_conv(:,:)  => null()  !< Meridional-wind tendency ...
 
     contains
       procedure :: create  => stateout_create  !<   allocate array data
@@ -539,24 +537,14 @@ module GFS_typedefs
     real (kind=kind_phys), pointer :: sfculw(:)      => null()   !< total sky sfc upward lw flux ( w/m**2 )
 
 !--- incoming quantities
-    real (kind=kind_phys), pointer :: dusfcin_cpl(:)          => null()   !< aoi_fld%dusfcin(item,lan)
-    real (kind=kind_phys), pointer :: dvsfcin_cpl(:)          => null()   !< aoi_fld%dvsfcin(item,lan)
-    real (kind=kind_phys), pointer :: dtsfcin_cpl(:)          => null()   !< aoi_fld%dtsfcin(item,lan)
-    real (kind=kind_phys), pointer :: dqsfcin_cpl(:)          => null()   !< aoi_fld%dqsfcin(item,lan)
-    real (kind=kind_phys), pointer :: ulwsfcin_cpl(:)         => null()   !< aoi_fld%ulwsfcin(item,lan)
-!   real (kind=kind_phys), pointer :: tseain_cpl(:)           => null()   !< aoi_fld%tseain(item,lan)
-!   real (kind=kind_phys), pointer :: tisfcin_cpl(:)          => null()   !< aoi_fld%tisfcin(item,lan)
-!   real (kind=kind_phys), pointer :: ficein_cpl(:)           => null()   !< aoi_fld%ficein(item,lan)
-!   real (kind=kind_phys), pointer :: hicein_cpl(:)           => null()   !< aoi_fld%hicein(item,lan)
-    real (kind=kind_phys), pointer :: hsnoin_cpl(:)           => null()   !< aoi_fld%hsnoin(item,lan)
-!   real (kind=kind_phys), pointer :: sfc_alb_nir_dir_cpl(:)  => null()   !< sfc nir albedo for direct rad
-!   real (kind=kind_phys), pointer :: sfc_alb_nir_dif_cpl(:)  => null()   !< sfc nir albedo for diffuse rad
-!   real (kind=kind_phys), pointer :: sfc_alb_vis_dir_cpl(:)  => null()   !< sfc vis albedo for direct rad
-!   real (kind=kind_phys), pointer :: sfc_alb_vis_dif_cpl(:)  => null()   !< sfc vis albedo for diffuse rad
-    !--- only variable needed for cplwav2atm=.TRUE.
-!   real (kind=kind_phys), pointer :: zorlwav_cpl(:)          => null()   !< roughness length from wave model
+    real (kind=kind_phys), pointer :: dusfcin_cpl(:)          => null()   !< sfc u momentum flux
+    real (kind=kind_phys), pointer :: dvsfcin_cpl(:)          => null()   !< sfc v momentum flux
+    real (kind=kind_phys), pointer :: dtsfcin_cpl(:)          => null()   !< sfc sensible heat flux input
+    real (kind=kind_phys), pointer :: dqsfcin_cpl(:)          => null()   !< sfc latent heat flux
+    real (kind=kind_phys), pointer :: ulwsfcin_cpl(:)         => null()   !< sfc upwelling LW flux
+    real (kind=kind_phys), pointer :: hsnoin_cpl(:)           => null()   !< sfc snow depth over sea ice
     !--- also needed for ice/ocn coupling
-    real (kind=kind_phys), pointer :: slimskin_cpl(:)=> null()   !< aoi_fld%slimskin(item,lan)
+    real (kind=kind_phys), pointer :: slimskin_cpl(:)=> null()   !< sea/land/ice mask
     !--- variables needed for use_med_flux =.TRUE.
     real (kind=kind_phys), pointer :: dusfcin_med(:)         => null()   !< sfc u momentum flux over ocean
     real (kind=kind_phys), pointer :: dvsfcin_med(:)         => null()   !< sfc v momentum flux over ocean
@@ -800,6 +788,7 @@ module GFS_typedefs
     logical              :: cplwav          !< default no cplwav collection
     logical              :: cplwav2atm      !< default no wav->atm coupling
     logical              :: cplaqm          !< default no cplaqm collection
+    logical              :: cplcat          !< default no cplcat collection
     logical              :: cplchm          !< default no cplchm collection
     logical              :: cpllnd          !< default no cpllnd collection
     logical              :: cpllm4          !< default no cpllm4 collection
@@ -807,8 +796,6 @@ module GFS_typedefs
     logical              :: rrfs_sd         !< default no rrfs_sd collection
     logical              :: cpl_fire        !< default no fire_behavior collection
     logical              :: use_cice_alb    !< default .false. - i.e. don't use albedo imported from the ice model
-    logical              :: cpl_imp_mrg     !< default no merge import with internal forcings
-    logical              :: cpl_imp_dbg     !< default no write import data to file post merge
     logical              :: use_med_flux    !< default .false. - i.e. don't use atmosphere-ocean fluxes imported from mediator
 
 !--- cdeps inline parameters
@@ -848,7 +835,7 @@ module GFS_typedefs
     integer              :: tend_opt_shal_conv
     integer              :: tend_opt_mp
     integer              :: tend_opt_stoch
-    
+
     logical              :: gfs_phys_time_vary_is_init=.false. !< GFS_phys_time_vary interstitial initialization flag
 
 !--- radiation control parameters
@@ -981,6 +968,10 @@ module GFS_typedefs
     logical              :: top_at_1                !< Vertical ordering flag.
     integer              :: iSFC                    !< Vertical index for surface
     integer              :: iTOA                    !< Vertical index for TOA
+    logical              :: is_init_lw_gas_optics   = .false.  !< flag to denote whether LW radiation gas optics have been initialized
+    logical              :: is_init_sw_gas_optics   = .false.  !< flag to denote whether SW radiation gas optics have been initialized
+    logical              :: is_init_lw_cloud_optics = .false.  !< flag to denote whether LW radiation cloud optics have been initialized
+    logical              :: is_init_sw_cloud_optics = .false.  !< flag to denote whether SW radiation cloud optics have been initialized
 
 !--- microphysical switch
     logical              :: convert_dry_rho = .true.       !< flag for converting mass/number concentrations from moist to dry
@@ -1086,8 +1077,9 @@ module GFS_typedefs
     real(kind=kind_phys) :: dt_inner        !< time step for the inner loop in s
     logical              :: sedi_semi       !< flag for semi Lagrangian sedi of rain
     integer              :: decfl           !< deformed CFL factor
-    type(ty_tempo_cfg)   :: tempo_cfg       !< Thompson MP configuration information.
+    type(ty_tempo_cfgs)  :: tempo_cfgs      !< Tempo MP configuration information.
     logical              :: thompson_mp_is_init=.false. !< Local scheme initialization flag
+    logical              :: tempo_mp_is_init=.false. !< Local scheme initialization flag    
     real(kind=kind_phys) :: nt_c_l          !< prescribed cloud liquid water number concentration over land
     real(kind=kind_phys) :: nt_c_o          !< prescribed cloud liquid water number concentration over ocean
     real(kind=kind_phys) :: av_i            !< transition value of coefficient matching at crossover from cloud ice to snow
@@ -1097,7 +1089,7 @@ module GFS_typedefs
     real(kind=kind_phys) :: rr_min          !< multiplicative tuning parameter for microphysical sedimentation minimum threshold
     real(kind=kind_phys) :: fs_fac_rain     !< adjustment for rain fall speed
     real(kind=kind_phys) :: fs_fac_snow     !< adjustment for snow fall speed
-    
+
     !--- GFDL microphysical paramters
     logical              :: lgfdlmprad      !< flag for GFDL mp scheme and radiation consistency
     logical              :: phys_hydrostatic
@@ -1326,6 +1318,11 @@ module GFS_typedefs
     real(kind=kind_phys) :: betascu         !< Tuning parameter for prog. closure shallow clouds
     real(kind=kind_phys) :: betamcu         !< Tuning parameter for prog. closure midlevel clouds
     real(kind=kind_phys) :: betadcu         !< Tuning parameter for prog. closure deep clouds
+    real(kind=kind_phys) :: lbb1            !< Tuning parameter for prog updraft entrainment term
+    real(kind=kind_phys) :: lbb2            !< Tuning parameter for prog updraft buoyancy term
+    real(kind=kind_phys) :: lbb3            !< Tuning parameter for prog updraft shear term
+    real(kind=kind_phys) :: dt_decay        !< Tuning parameter for prog updraft decay time
+    
     logical              :: sigmab_coldstart !< flag to cold start sigmab
 
     !--- MYNN parameters/switches
@@ -2430,6 +2427,17 @@ module GFS_typedefs
     Stateout%gt0 = clear_val
     Stateout%gq0 = clear_val
 
+    ! Physics tendencies for coupling
+    allocate (Stateout%ten_u_pbl  (IM,Model%levs))
+    allocate (Stateout%ten_v_pbl  (IM,Model%levs))
+    allocate (Stateout%ten_u_conv (IM,Model%levs))
+    allocate (Stateout%ten_v_conv (IM,Model%levs))
+
+    Stateout%ten_u_pbl  = clear_val
+    Stateout%ten_v_pbl  = clear_val
+    Stateout%ten_u_conv = clear_val
+    Stateout%ten_v_conv = clear_val
+
  end subroutine stateout_create
 
 
@@ -3112,22 +3120,15 @@ module GFS_typedefs
       Coupling%tsfci_cpl = clear_val
     endif
 
-!   if (Model%cplwav2atm) then
-      !--- incoming quantities
-!     allocate (Coupling%zorlwav_cpl (IM))
-
-!     Coupling%zorlwav_cpl  = clear_val
-!   endif
-
     ! -- additional coupling options for air quality
-    if (Model%cplflx .or. Model%cpllnd .or. Model%cpl_fire .or. (Model%cplaqm .and. .not.Model%cplflx)) then
+    if (Model%cplflx .or. Model%cpllnd .or. Model%cpl_fire .or. (Model%cplaqm .and. .not.Model%cplflx) .or. Model%cplcat) then
       allocate (Coupling%psurfi_cpl  (IM))
       allocate (Coupling%nswsfci_cpl (IM))
       Coupling%psurfi_cpl  = clear_val
       Coupling%nswsfci_cpl = clear_val
     endif
 
-    if (Model%cplflx .or. Model%cpl_fire .or. (Model%cplaqm .and. .not.Model%cplflx)) then
+    if (Model%cplflx .or. Model%cpl_fire .or. (Model%cplaqm .and. .not.Model%cplflx) .or. Model%cplcat) then
       allocate (Coupling%dtsfci_cpl  (IM))
       allocate (Coupling%dqsfci_cpl  (IM))
       allocate (Coupling%t2mi_cpl    (IM))
@@ -3176,15 +3177,7 @@ module GFS_typedefs
       allocate (Coupling%dtsfcin_cpl         (IM))
       allocate (Coupling%dqsfcin_cpl         (IM))
       allocate (Coupling%ulwsfcin_cpl        (IM))
-!     allocate (Coupling%tseain_cpl          (IM))
-!     allocate (Coupling%tisfcin_cpl         (IM))
-!     allocate (Coupling%ficein_cpl          (IM))
-!     allocate (Coupling%hicein_cpl          (IM))
       allocate (Coupling%hsnoin_cpl          (IM))
-!     allocate (Coupling%sfc_alb_nir_dir_cpl (IM))
-!     allocate (Coupling%sfc_alb_nir_dif_cpl (IM))
-!     allocate (Coupling%sfc_alb_vis_dir_cpl (IM))
-!     allocate (Coupling%sfc_alb_vis_dif_cpl (IM))
 
       Coupling%slimskin_cpl          = clear_val
       Coupling%dusfcin_cpl           = clear_val
@@ -3192,15 +3185,7 @@ module GFS_typedefs
       Coupling%dtsfcin_cpl           = clear_val
       Coupling%dqsfcin_cpl           = clear_val
       Coupling%ulwsfcin_cpl          = clear_val
-!     Coupling%tseain_cpl            = clear_val
-!     Coupling%tisfcin_cpl           = clear_val
-!     Coupling%ficein_cpl            = clear_val
-!     Coupling%hicein_cpl            = clear_val
       Coupling%hsnoin_cpl            = clear_val
-!     Coupling%sfc_alb_nir_dir_cpl   = clear_val
-!     Coupling%sfc_alb_nir_dif_cpl   = clear_val
-!     Coupling%sfc_alb_vis_dir_cpl   = clear_val
-!     Coupling%sfc_alb_vis_dif_cpl   = clear_val
 
       ! -- Coupling options to retrive atmosphere-ocean fluxes from mediator
       if (Model%use_med_flux) then
@@ -3395,14 +3380,22 @@ module GFS_typedefs
     endif
 
     !--- needed for Thompson's aerosol option
-    if((Model%imp_physics == Model%imp_physics_thompson .or. &
-         Model%imp_physics == Model%imp_physics_tempo) .and. &
+    if((Model%imp_physics == Model%imp_physics_thompson) .and. &
          (Model%ltaerosol .or. Model%mraerosol)) then
       allocate (Coupling%nwfa2d (IM))
       allocate (Coupling%nifa2d (IM))
       Coupling%nwfa2d   = clear_val
       Coupling%nifa2d   = clear_val
     endif
+
+    !--- needed for Tempo's aerosol option
+    if((Model%imp_physics == Model%imp_physics_tempo) .and. &
+         (Model%ltaerosol)) then
+      allocate (Coupling%nwfa2d (IM))
+      allocate (Coupling%nifa2d (IM))
+      Coupling%nwfa2d   = clear_val
+      Coupling%nifa2d   = clear_val
+    endif   
 
     if(Model%rrfs_sd) then
     !--- needed for smoke aerosol option
@@ -3468,7 +3461,7 @@ module GFS_typedefs
                                  cny, gnx, gny, ak, bk, hydrostatic)
 
 !--- modules
-    use physcons,         only: con_rerth, con_pi
+    use physcons,         only: con_rerth, con_pi, con_p0
     use mersenne_twister, only: random_setseed, random_number
 !
     implicit none
@@ -3561,6 +3554,7 @@ module GFS_typedefs
     logical              :: cplwav         = .false.         !< default no cplwav collection
     logical              :: cplwav2atm     = .false.         !< default no cplwav2atm coupling
     logical              :: cplaqm         = .false.         !< default no cplaqm collection
+    logical              :: cplcat         = .false.         !< default no cplcat collection
     logical              :: cplchm         = .false.         !< default no cplchm collection
     logical              :: cpllnd         = .false.         !< default no cpllnd collection
     logical              :: cpllm4         = .false.         !< default no cpllm4 collection
@@ -3568,8 +3562,6 @@ module GFS_typedefs
     logical              :: rrfs_sd        = .false.         !< default no rrfs_sd collection
     logical              :: cpl_fire       = .false.         !< default no fire behavior colleciton
     logical              :: use_cice_alb   = .false.         !< default no cice albedo
-    logical              :: cpl_imp_mrg    = .false.         !< default no merge import with internal forcings
-    logical              :: cpl_imp_dbg    = .false.         !< default no write import data to file post merge
     logical              :: use_med_flux   = .false.         !< default no atmosphere-ocean fluxes from mediator
 
     !--- cdeps inline parameters
@@ -3774,7 +3766,7 @@ module GFS_typedefs
     real(kind=kind_phys) :: rr_min         = 1000.0             !< multiplicative tuning parameter for microphysical sedimentation minimum threshold
     real(kind=kind_phys) :: fs_fac_rain    = 1.0                !< adjustment for rain fall speed
     real(kind=kind_phys) :: fs_fac_snow    = 1.0                !< adjustment for snow fall speed
-    
+
     !--- GFDL microphysical parameters
     logical              :: lgfdlmprad     = .false.            !< flag for GFDLMP radiation interaction
 
@@ -3971,6 +3963,11 @@ module GFS_typedefs
     real(kind=kind_phys) :: betascu           = 8.0 !< Tuning parameter for prog. closure shallow clouds
     real(kind=kind_phys) :: betamcu           = 1.0 !< Tuning parameter for prog. closure midlevel clouds
     real(kind=kind_phys) :: betadcu           = 2.0 !< Tuning parameter for prog. closure deep clouds
+    real(kind=kind_phys) :: lbb1              = 4.0 !< Tuning parameter for prog. updraft entrainment term
+    real(kind=kind_phys) :: lbb2              = 0.8 !< Tuning parameter for prog. updraft entrainment term
+    real(kind=kind_phys) :: lbb3              = 1.0 !< Tuning parameter for prog. updraft entrainment term
+    real(kind=kind_phys) :: dt_decay          = 3600. !< Tuning parameter for prog. updraft decay time
+    
     logical              :: sigmab_coldstart  = .false. !< flag to cold start sigmab
     ! *DH
     logical              :: do_myjsfc         = .false.               !< flag for MYJ surface layer scheme
@@ -4259,7 +4256,7 @@ module GFS_typedefs
                                tend_opt_mp, tend_opt_stoch,                                 &
                           !--- coupling parameters
                                cplflx, cplice, cplocn2atm, cplwav, cplwav2atm, cplaqm,      &
-                               cplchm, cpllnd, cpllm4, cpllnd2atm, cpl_imp_mrg, cpl_imp_dbg,&
+                               cplchm, cplcat, cpllnd, cpllm4, cpllnd2atm,                  &
                                cpl_fire, rrfs_sd, use_cice_alb,                             &
 #ifdef IDEA_PHYS
                                lsidea, weimer_model, f107_kp_size, f107_kp_interval,        &
@@ -4340,7 +4337,8 @@ module GFS_typedefs
                                ugwp_seq_update, var_ric, coef_ric_l, coef_ric_s, hurr_pbl,  &
                                do_myjsfc, do_myjpbl,                                        &
                                hwrf_samfdeep, hwrf_samfshal,progsigma,progomega,betascu,    &
-                               betamcu, betadcu,h2o_phys, pdfcld, shcnvcw, redrag,          &
+                               betamcu, betadcu, lbb1, lbb2, lbb3, dt_decay, h2o_phys,      &
+                               pdfcld, shcnvcw, redrag,                                     &
                                hybedmf, satmedmf, tte_edmf, sigmab_coldstart,               &
                                shinhong, do_ysu, dspheat, lheatstrg, lseaspray, cnvcld,     &
                                xr_cnvcld, random_clds, shal_cnv, imfshalcnv, imfdeepcnv,    &
@@ -4693,7 +4691,7 @@ module GFS_typedefs
     Model%tend_opt_shal_conv  = tend_opt_shal_conv
     Model%tend_opt_mp         = tend_opt_mp
     Model%tend_opt_stoch      = tend_opt_stoch
-    
+
     Model%ipr = min(minval(Model%blksz), 10)
 !--- coupling parameters
     Model%cplflx           = cplflx
@@ -4710,13 +4708,12 @@ module GFS_typedefs
     Model%cplwav           = cplwav
     Model%cplwav2atm       = cplwav2atm
     Model%cplaqm           = cplaqm
-    Model%cplchm           = cplchm .or. cplaqm
+    Model%cplcat           = cplcat
+    Model%cplchm           = cplchm .or. cplaqm .or. cplcat
     Model%cpllnd           = cpllnd
     Model%cpllm4           = cpllm4
     Model%cpllnd2atm       = cpllnd2atm
     Model%use_cice_alb     = use_cice_alb
-    Model%cpl_imp_mrg      = cpl_imp_mrg
-    Model%cpl_imp_dbg      = cpl_imp_dbg
     Model%use_med_flux     = use_med_flux
 
 !--- cdeps inline parameters
@@ -5064,12 +5061,8 @@ module GFS_typedefs
 
 !--- TEMPO MP parameters
     ! DJS to Anders: Maybe we put more of these nml options into the TEMPO configuration type?
-    Model%tempo_cfg%aerosol_aware = (ltaerosol .or. mraerosol)
-    Model%tempo_cfg%hail_aware    = lthailaware
-    if (Model%ltaerosol .and. Model%mraerosol) then
-       write(0,*) 'Logic error: Only one TEMPO aerosol option can be true, either ltaerosol or mraerosol)'
-       stop
-    end if
+    Model%tempo_cfgs%aerosolaware_flag = ltaerosol
+    Model%tempo_cfgs%hailaware_flag    = lthailaware
 
 !--- F-A MP parameters
     Model%rhgrd            = rhgrd
@@ -5265,24 +5258,38 @@ module GFS_typedefs
     Model%hwrf_samfdeep = hwrf_samfdeep
     Model%hwrf_samfshal = hwrf_samfshal
 
-    !--prognostic closure - check
-    if ((progsigma .and. imfdeepcnv/=2) .and. (progsigma .and. imfdeepcnv/=5)) then
-       write(*,*) 'Logic error: progsigma requires imfdeepcnv=2 or 5'
+    !-- Prognostic closure check
+    if (progsigma .and. .not. (                         &
+         imfdeepcnv == Model%imfdeepcnv_samf .or.             &
+         imfdeepcnv == Model%imfdeepcnv_c3   .or.             &
+         imfshalcnv == Model%imfshalcnv_samf .or.             &
+         imfshalcnv == Model%imfshalcnv_c3)) then
+       
+       write(*,*) 'Logic error: progsigma requires SAMF or C3 deep/shallow convection'
        stop
-    end if
+    endif
     Model%progsigma = progsigma
     Model%betascu = betascu
     Model%betamcu = betamcu
     Model%betadcu = betadcu
     Model%sigmab_coldstart = sigmab_coldstart
 
-    !--prognostic closure - check
-    if (progomega .and. imfdeepcnv/=2) then
-       write(*,*) 'Logic error: progomega requires imfdeepcnv=2'
+    !-- Prognostic closure check
+    if (progomega .and. .not. (                         &
+         imfdeepcnv == Model%imfdeepcnv_samf .or.             &
+         imfdeepcnv == Model%imfdeepcnv_c3   .or.             &
+         imfshalcnv == Model%imfshalcnv_samf .or.             &
+         imfshalcnv == Model%imfshalcnv_c3)) then
+       write(*,*) 'Logic error: progomega requires SAMF or C3 deep/shallow convection'
        stop
-    end if
+    endif
+    
     Model%progomega = progomega
-
+    Model%lbb1 = lbb1
+    Model%lbb2 = lbb2
+    Model%lbb3 = lbb3
+    Model%dt_decay = dt_decay
+    
     if (oz_phys .and. oz_phys_2015) then
        write(*,*) 'Logic error: can only use one ozone physics option (oz_phys or oz_phys_2015), not both. Exiting.'
        stop
@@ -5561,26 +5568,45 @@ module GFS_typedefs
     if( Model%ntoz <= 0 )  &
     Model%ntoz             = get_physics_tracer_index('spo3', Model)
 #endif
-    Model%ntcw             = get_physics_tracer_index('liq_wat', Model)
-    Model%ntiw             = get_physics_tracer_index('ice_wat', Model)
-    Model%ntrw             = get_physics_tracer_index('rainwat', Model)
-    Model%ntsw             = get_physics_tracer_index('snowwat', Model)
-    Model%ntgl             = get_physics_tracer_index('graupel', Model)
-    Model%nthl             = get_physics_tracer_index('hailwat', Model)
-    Model%ntclamt          = get_physics_tracer_index('cld_amt', Model)
-    Model%ntlnc            = get_physics_tracer_index('water_nc', Model)
-    Model%ntinc            = get_physics_tracer_index('ice_nc', Model)
-    Model%ntrnc            = get_physics_tracer_index('rain_nc', Model)
-    Model%ntsnc            = get_physics_tracer_index('snow_nc', Model)
-    Model%ntgnc            = get_physics_tracer_index('graupel_nc', Model)
-    Model%nthnc            = get_physics_tracer_index('hail_nc', Model)
-    Model%ntccn            = get_physics_tracer_index('ccn_nc', Model)
-    Model%ntccna           = get_physics_tracer_index('ccna_nc', Model)
-    Model%ntgv             = get_physics_tracer_index('graupel_vol', Model)
-    Model%nthv             = get_physics_tracer_index('hail_vol', Model)
-    Model%ntrz             = get_physics_tracer_index('rain_ref', Model)
-    Model%ntgz             = get_physics_tracer_index('graupel_ref', Model)
-    Model%nthz             = get_physics_tracer_index('hail_ref', Model)
+    if (Model%dycore_active == Model%dycore_fv3) then
+       Model%ntcw             = get_physics_tracer_index('liq_wat', Model)
+       Model%ntiw             = get_physics_tracer_index('ice_wat', Model)
+       Model%ntrw             = get_physics_tracer_index('rainwat', Model)
+       Model%ntsw             = get_physics_tracer_index('snowwat', Model)
+       Model%ntgl             = get_physics_tracer_index('graupel', Model)
+       Model%nthl             = get_physics_tracer_index('hailwat', Model)
+       Model%ntclamt          = get_physics_tracer_index('cld_amt', Model)
+       Model%ntlnc            = get_physics_tracer_index('water_nc', Model)
+       Model%ntinc            = get_physics_tracer_index('ice_nc', Model)
+       Model%ntrnc            = get_physics_tracer_index('rain_nc', Model)
+       Model%ntsnc            = get_physics_tracer_index('snow_nc', Model)
+       Model%ntgnc            = get_physics_tracer_index('graupel_nc', Model)
+       Model%nthnc            = get_physics_tracer_index('hail_nc', Model)
+       Model%ntccn            = get_physics_tracer_index('ccn_nc', Model)
+       Model%ntccna           = get_physics_tracer_index('ccna_nc', Model)
+       Model%ntgv             = get_physics_tracer_index('graupel_vol', Model)
+       Model%nthv             = get_physics_tracer_index('hail_vol', Model)
+       Model%ntrz             = get_physics_tracer_index('rain_ref', Model)
+       Model%ntgz             = get_physics_tracer_index('graupel_ref', Model)
+       Model%nthz             = get_physics_tracer_index('hail_ref', Model)
+       Model%ntwa             = get_physics_tracer_index('liq_aero', Model)
+       Model%ntia             = get_physics_tracer_index('ice_aero', Model)
+    endif
+    if (Model%dycore_active == Model%dycore_mpas) then
+       Model%ntcw             = get_physics_tracer_index('qc', Model)
+       Model%ntiw             = get_physics_tracer_index('qi', Model)
+       Model%ntrw             = get_physics_tracer_index('qr', Model)
+       Model%ntsw             = get_physics_tracer_index('qs', Model)
+       Model%ntgl             = get_physics_tracer_index('qg', Model)
+       Model%nthl             = get_physics_tracer_index('qh', Model)
+       Model%ntinc            = get_physics_tracer_index('ni', Model)
+       Model%ntrnc            = get_physics_tracer_index('nr', Model)
+       Model%ntsnc            = get_physics_tracer_index('ns', Model)
+       Model%ntgnc            = get_physics_tracer_index('ng', Model)
+       Model%nthnc            = get_physics_tracer_index('nh', Model)
+       Model%ntwa             = get_physics_tracer_index('nwfa', Model)
+       Model%ntia             = get_physics_tracer_index('nifa', Model)
+    endif
     Model%ntke             = get_physics_tracer_index('sgs_tke', Model)
     Model%ntsigma          = get_physics_tracer_index('sigmab', Model)
     Model%ntomega          = get_physics_tracer_index('omegab', Model)
@@ -6935,9 +6961,12 @@ module GFS_typedefs
       if (Model%dycore_active == Model%dycore_fv3) then
          print *, ' hydrostatic       : ', Model%hydrostatic
       endif
-      print *, ' '
-      print *, 'grid extent parameters'
-      if (Model%dycore_active == Model%dycore_fv3) then
+   endif
+
+   if (Model%dycore_active == Model%dycore_fv3) then
+      if (Model%me == Model%master) then
+         print *, ' '
+         print *, 'grid extent parameters (FV3)'
          print *, ' isc               : ', Model%isc
          print *, ' jsc               : ', Model%jsc
          print *, ' nx                : ', Model%nx
@@ -6948,10 +6977,18 @@ module GFS_typedefs
          print *, ' lonr              : ', Model%lonr
          print *, ' latr              : ', Model%latr
       end if
+   endif
+
+   if (Model%dycore_active == Model%dycore_mpas) then
+      print *, ' '
+      print *, 'grid extent parameters (MPAS) for processor ',Model%me
       print *, ' nblks             : ', Model%nblks
       print *, ' blksz(1)          : ', Model%blksz(1)
       print *, ' blksz(nblks)      : ', Model%blksz(Model%nblks)
       print *, ' Model%ncols       : ', Model%ncols
+   endif
+
+   if (Model%me == Model%master) then
       print *, ' '
       print *, 'coupling parameters'
       print *, ' cplflx            : ', Model%cplflx
@@ -6960,6 +6997,7 @@ module GFS_typedefs
       print *, ' cplwav            : ', Model%cplwav
       print *, ' cplwav2atm        : ', Model%cplwav2atm
       print *, ' cplaqm            : ', Model%cplaqm
+      print *, ' cplcat            : ', Model%cplcat
       print *, ' cplchm            : ', Model%cplchm
       print *, ' cpllnd            : ', Model%cpllnd
       print *, ' cpllm4            : ', Model%cpllm4
@@ -6967,8 +7005,6 @@ module GFS_typedefs
       print *, ' rrfs_sd           : ', Model%rrfs_sd
       print *, ' cpl_fire          : ', Model%cpl_fire
       print *, ' use_cice_alb      : ', Model%use_cice_alb
-      print *, ' cpl_imp_mrg       : ', Model%cpl_imp_mrg
-      print *, ' cpl_imp_dbg       : ', Model%cpl_imp_dbg
       print *, ' use_med_flux      : ', Model%use_med_flux
       print *, ' use_cdeps_inline  : ', Model%use_cdeps_inline
       if(Model%imfdeepcnv == Model%imfdeepcnv_gf .or.Model%imfdeepcnv == Model%imfdeepcnv_c3) then
@@ -7396,6 +7432,10 @@ module GFS_typedefs
       print *, 'betascu            : ', Model%betascu
       print *, 'betamcu            : ', Model%betamcu
       print *, 'betadcu            : ', Model%betadcu
+      print *, 'lbb1               : ', Model%lbb1
+      print *, 'lbb2               : ', Model%lbb2
+      print *, 'lbb3               : ', Model%lbb3
+      print *, 'dt_decay           : ', Model%dt_decay
       print *, 'sigmab_coldstart   : ', Model%sigmab_coldstart
       print *, ' '
       print *, 'cellular automata'
@@ -8791,19 +8831,44 @@ module GFS_typedefs
 
   function get_physics_tracer_index (name, Model)
     !This function uses the FMS version of get_tracer_index, but changes the missing tracer index to the value used throughout the physics code, rather than the one used in FMS
+#ifdef FV3
     use tracer_manager_mod, only: get_tracer_index, NO_TRACER
     use field_manager_mod, only: MODEL_ATMOS
-
+#endif
     character(len=*),  intent(in) :: name
     type(GFS_control_type), intent(in) :: Model
 
     !--- local variables
     integer :: get_physics_tracer_index
 
-    get_physics_tracer_index = get_tracer_index(MODEL_ATMOS, name, verbose = (Model%me == Model%master) .and. Model%debug)
-
-    if (get_physics_tracer_index == NO_TRACER) get_physics_tracer_index = physics_no_tracer
+    ! UFS-FV3 uses FMS
+#ifdef FV3
+    if (Model%dycore_active == Model%dycore_fv3) then
+       get_physics_tracer_index = get_tracer_index(MODEL_ATMOS, name, verbose = (Model%me == Model%master) .and. Model%debug)
+       if (get_physics_tracer_index == NO_TRACER) get_physics_tracer_index = physics_no_tracer
+    endif
+#endif
+    ! UFS-MPAS does not use FMS
+    if (Model%dycore_active == Model%dycore_mpas) then
+       get_physics_tracer_index = get_constituent_index(name, Model%tracer_names)
+    endif
 
   end function get_physics_tracer_index
+
+  ! We don't use FMS when using the MPAS dynamical core. Here we simply grab the
+  ! index from the input tracer list. This is the same as FMS get_tracer_index().
+  function get_constituent_index(const_name, tracer_names)
+    character(len=*),  intent(in) :: const_name
+    character(len=*),  intent(in) :: tracer_names(:)
+    integer :: itracer
+    integer :: get_constituent_index
+
+    get_constituent_index = 0
+    do itracer=1,size(tracer_names)
+       if (trim(const_name) == trim(tracer_names(itracer))) then
+          get_constituent_index = itracer
+       endif
+    enddo
+  end function get_constituent_index
 
 end module GFS_typedefs
