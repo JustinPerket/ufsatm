@@ -139,7 +139,7 @@ module module_cplfields
 
 ! Import Fields ----------------------------------------
   !> Number of import fields (IVAI: add 3 inst_tracer_diag)
-  integer,          public, parameter :: NimportFields = 46 + 3 + 5
+  integer,          public, parameter :: NimportFields = 47 + 3 + 5
   !> Logicals to inidicate if field is valid
   logical,          public            :: importFieldsValid(NimportFields)
   !> ESMF array for import fields
@@ -204,36 +204,7 @@ module module_cplfields
     FieldInfo("inst_lnd_ir_dif_albedo                   ", "s"), &
     FieldInfo("inst_lnd_ir_dir_albedo                   ", "s"), &
     FieldInfo("inst_lnd_vis_dif_albedo                  ", "s"), &
-    FieldInfo("inst_lnd_vis_dir_albedo                  ", "s"), &    
-
-    !  For JEDI
-    ! dynamics
-    FieldInfo("u                                        ", "l"), &
-    FieldInfo("v                                        ", "l"), &
-    FieldInfo("ua                                       ", "l"), &
-    FieldInfo("va                                       ", "l"), &
-    FieldInfo("t                                        ", "l"), &
-    FieldInfo("delp                                     ", "l"), &
-    FieldInfo("sphum                                    ", "l"), &
-    FieldInfo("ice_wat                                  ", "l"), &
-    FieldInfo("liq_wat                                  ", "l"), &
-    FieldInfo("o3mr                                     ", "l"), &
-    FieldInfo("phis                                     ", "s"), &
-    FieldInfo("u_srf                                    ", "s"), &
-    FieldInfo("v_srf                                    ", "s"), &
-    ! physics
-    FieldInfo("slmsk                                    ", "s"), &
-    FieldInfo("weasd                                    ", "s"), &
-    FieldInfo("tsea                                     ", "s"), &
-    FieldInfo("vtype                                    ", "s"), &
-    FieldInfo("stype                                    ", "s"), &
-    FieldInfo("vfrac                                    ", "s"), &
-    FieldInfo("stc                                      ", "g"), &
-    FieldInfo("smc                                      ", "g"), &
-    FieldInfo("snwdph                                   ", "s"), &
-    FieldInfo("f10m                                     ", "s"), &
-    FieldInfo("zorl                                     ", "s"), &
-    FieldInfo("t2m                                      ", "s"), &
+    FieldInfo("inst_lnd_vis_dir_albedo                  ", "s"), &
 
     ! For FIRE
     FieldInfo("hflx_fire                                ", "s"), &
